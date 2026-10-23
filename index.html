@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dolmo</title>
-<meta name="description" content="Dolmo：macOS 会议实时翻译，字幕显示在刘海岛里；打开「分享时隐藏」后，共享屏幕时别人看不到。">
+<meta name="description" content="Dolmo：macOS 会议实时翻译，字幕显示在刘海岛里；打开「分享时隐藏」后，不会出现在系统截图和屏幕共享里。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -132,13 +132,13 @@
         <span class="orig" id="orig" lang="en">Could you walk us through the timeline?</span>
         <span class="tr" id="tr">能给我们讲一下时间安排吗？</span>
       </span>
-      <span class="more"><span class="clip"><span class="suggest"><b data-i="sugLabel">回答建议</b><span data-i="sug">第一阶段两周完成原型，第三周内测，月底给你们完整版本。</span></span></span></span>
+      <span class="more" id="more" aria-hidden="true"><span class="clip"><span class="suggest"><b data-i="sugLabel">回答建议</b><span data-i="sug">第一阶段两周完成原型，第三周内测，月底给你们完整版本。</span></span></span></span>
     </button>
   </div>
 
   <div class="wrap">
     <h1 data-i="h1">对方说的话，<br>译好挂在刘海上。</h1>
-    <p class="lede" data-i="lede">Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；打开「分享时隐藏」后，你共享屏幕时别人看不到它。</p>
+    <p class="lede" data-i="lede">Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；打开「分享时隐藏」后，系统截图和屏幕共享的画面里不会出现它。</p>
     <div class="actions">
       <button class="see" id="see" type="button" aria-pressed="false" data-i="see">看看对方看到什么</button>
       <span class="soon" data-i="soon">即将推出，目前还在测试，暂不提供下载。</span>
@@ -150,9 +150,9 @@
       <dl class="list">
         <div><dt data-i="f1">字幕在刘海里</dt><dd data-i="f1d">对方的原文和译文一起显示在刘海岛上，不挡会议窗口。不用时，岛收成刘海两侧的一个小点。</dd></div>
         <div><dt data-i="f2">回答建议</dt><dd data-i="f2d">对方提问时，按你导入的简历或资料给出可以直接说的回答。只显示，不朗读。</dd></div>
-        <div><dt data-i="f3">共享时字幕不入画</dt><dd data-i="f3d">打开「分享时隐藏」后，截图、录屏和屏幕共享都拍不到岛上的字幕。设置页和 iPhone 第二屏不受这个开关影响。</dd></div>
+        <div><dt data-i="f3">共享时字幕不入画</dt><dd data-i="f3d">打开「分享时隐藏」后，岛和字幕不会出现在系统截图、录屏和屏幕共享的画面里。Zoom、Meet 等会议软件还在逐个验证，共享前可以先预览一下。设置页和 iPhone 第二屏不受这个开关影响。</dd></div>
         <div><dt data-i="f4">可以完全离线</dt><dd data-i="f4d">在 Apple 芯片、macOS 26 的 Mac 上用系统自带的语音识别和翻译，语言资源下载好后，识别和翻译都在这台 Mac 上完成。也可以接云端服务；翻译和回答建议还能接本机的 Ollama 等模型。</dd></div>
-        <div><dt data-i="f5">记录保存在本机</dt><dd data-i="f5d">每场会话的字幕保存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。生成回答建议或纪要时，相关内容会发给你选的服务。</dd></div>
+        <div><dt data-i="f5">记录保存在本机</dt><dd data-i="f5d">每场会话的字幕保存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。用云端服务时，音频和文字会发给对应的服务；用 Soniox 识别时，导入资料里的术语也会在开始翻译时发过去；生成回答建议或纪要时，相关内容会发给你选的模型。</dd></div>
         <div><dt data-i="f6">一个快捷键开始</dt><dd data-i="f6d">检测到 Zoom、Teams、Meet 等通话时，岛上会提示「开始翻译」，按 ⌃⌥R 或点一下就开始。</dd></div>
       </dl>
     </section>
@@ -177,16 +177,16 @@ const T = {
     live: "对方在说话", sugLabel: "回答建议",
     sug: "第一阶段两周完成原型，第三周内测，月底给你们完整版本。",
     h1: "对方说的话，<br>译好挂在刘海上。",
-    lede: "Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；打开「分享时隐藏」后，你共享屏幕时别人看不到它。",
+    lede: "Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；打开「分享时隐藏」后，系统截图和屏幕共享的画面里不会出现它。",
     see: "看看对方看到什么", seeBack: "回到我看到的",
     seen: "这是共享画面：岛和字幕都不在画面里。",
     soon: "即将推出，目前还在测试，暂不提供下载。",
     what: "它能做什么",
     f1: "字幕在刘海里", f1d: "对方的原文和译文一起显示在刘海岛上，不挡会议窗口。不用时，岛收成刘海两侧的一个小点。",
     f2: "回答建议", f2d: "对方提问时，按你导入的简历或资料给出可以直接说的回答。只显示，不朗读。",
-    f3: "共享时字幕不入画", f3d: "打开「分享时隐藏」后，截图、录屏和屏幕共享都拍不到岛上的字幕。设置页和 iPhone 第二屏不受这个开关影响。",
+    f3: "共享时字幕不入画", f3d: "打开「分享时隐藏」后，岛和字幕不会出现在系统截图、录屏和屏幕共享的画面里。Zoom、Meet 等会议软件还在逐个验证，共享前可以先预览一下。设置页和 iPhone 第二屏不受这个开关影响。",
     f4: "可以完全离线", f4d: "在 Apple 芯片、macOS 26 的 Mac 上用系统自带的语音识别和翻译，语言资源下载好后，识别和翻译都在这台 Mac 上完成。也可以接云端服务；翻译和回答建议还能接本机的 Ollama 等模型。",
-    f5: "记录保存在本机", f5d: "每场会话的字幕保存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。生成回答建议或纪要时，相关内容会发给你选的服务。",
+    f5: "记录保存在本机", f5d: "每场会话的字幕保存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。用云端服务时，音频和文字会发给对应的服务；用 Soniox 识别时，导入资料里的术语也会在开始翻译时发过去；生成回答建议或纪要时，相关内容会发给你选的模型。",
     f6: "一个快捷键开始", f6d: "检测到 Zoom、Teams、Meet 等通话时，岛上会提示「开始翻译」，按 ⌃⌥R 或点一下就开始。",
     needs: "需要什么",
     req: "<strong>macOS 14 或更高。</strong>自动提示通话需要 macOS 14.4，离线模式需要 Apple 芯片和 macOS 26。用云端服务时，需要你自己的服务账号和 API key，key 只保存在本机。",
@@ -199,16 +199,16 @@ const T = {
     live: "They're speaking", sugLabel: "Suggested reply",
     sug: "Two weeks for the prototype, a private beta in week three, and the full version by the end of the month.",
     h1: "What they say, translated, right under the notch.",
-    lede: "Dolmo translates meetings live on macOS. Captions appear in an island around the notch at the top of your screen; with “Hide when sharing” on, it stays out of your screen shares.",
+    lede: "Dolmo translates meetings live on macOS. Captions appear in an island around the notch at the top of your screen; with “Hide when sharing” on, it stays out of system screenshots and screen shares.",
     see: "Show what they see", seeBack: "Back to my view",
     seen: "This is the shared screen: neither the island nor its captions show up.",
     soon: "Coming soon. Still in testing, no download yet.",
     what: "What it does",
     f1: "Captions in the notch", f1d: "Their words and the translation sit together in the notch island, clear of your meeting window. When idle, the island shrinks to a dot beside the notch.",
     f2: "Suggested replies", f2d: "When they ask a question, Dolmo suggests an answer you can say, based on the résumé or notes you imported. Shown, never spoken.",
-    f3: "Captions stay out of shares", f3d: "With “Hide when sharing” on, screenshots, recordings and screen shares can't capture the captions on the island. Settings and the iPhone second screen are not covered by this switch.",
+    f3: "Captions stay out of shares", f3d: "With “Hide when sharing” on, the island and its captions stay out of system screenshots, recordings and screen shares. Zoom, Meet and other meeting apps are still being checked one by one, so preview your share first. Settings and the iPhone second screen are not covered by this switch.",
     f4: "Works fully offline", f4d: "On an Apple silicon Mac with macOS 26, the built-in speech recognition and translation run on this Mac once their language files are downloaded. You can also use a cloud service, and connect translation and suggested replies to a local model such as Ollama.",
-    f5: "Transcripts saved on your Mac", f5d: "Each session's captions are saved on this Mac, searchable and exportable as TXT or Markdown. Every saved session starts with a reminder on the island to ask the other side first, with one click to not save. Suggested replies and summaries send the relevant text to the service you chose.",
+    f5: "Transcripts saved on your Mac", f5d: "Each session's captions are saved on this Mac, searchable and exportable as TXT or Markdown. Every saved session starts with a reminder on the island to ask the other side first, with one click to not save. Cloud services receive the audio and text they process; with Soniox, terms from your imported notes are sent when translation starts; suggested replies and summaries send the relevant text to the model you chose.",
     f6: "One shortcut to start", f6d: "When a Zoom, Teams or Meet call is detected, the island offers “Start translating”. Press ⌃⌥R or click to begin.",
     needs: "What you need",
     req: "<strong>macOS 14 or later.</strong> Call prompts need macOS 14.4; offline mode needs Apple silicon and macOS 26. Cloud services need your own account and API key, which is stored only on this Mac.",
@@ -226,7 +226,7 @@ const $ = id => document.getElementById(id);
 let lang = "zh", sharing = false, i = 0;
 const guess = (navigator.language || "").startsWith("zh") ? "zh" : "en";
 try { lang = localStorage.getItem("dolmo-lang"); } catch {}
-if (!(lang in T)) lang = guess;
+if (lang !== "zh" && lang !== "en") lang = guess;
 
 function render() {
   const t = T[lang];
@@ -255,7 +255,10 @@ $("lang").onclick = () => {
   try { localStorage.setItem("dolmo-lang", lang); } catch {}
   render();
 };
-const expand = open => $("island").setAttribute("aria-expanded", String(open));
+const expand = open => {
+  $("island").setAttribute("aria-expanded", String(open));
+  $("more").setAttribute("aria-hidden", String(!open));
+};
 const fine = matchMedia("(hover: hover) and (pointer: fine)");
 let hovered = false;
 // Like the real island: hovering opens it; a click (touch, keyboard) toggles it.
@@ -276,7 +279,9 @@ $("see").onclick = () => {
 // Live captions only when motion is welcome and the page is visible.
 const still = matchMedia("(prefers-reduced-motion: reduce)");
 setInterval(() => {
-  if (still.matches || document.hidden || sharing) return;
+  // Paused while the reader is on the island (hover, focus or open), so a line can be read.
+  const isl = $("island");
+  if (still.matches || document.hidden || sharing || hovered || isl.matches(":focus") || isl.getAttribute("aria-expanded") === "true") return;
   $("line").style.opacity = 0;
   setTimeout(() => { i = (i + 1) % LINES.length; showLine(); $("line").style.opacity = 1; }, 200);
 }, 3600);
