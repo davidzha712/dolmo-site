@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dolmo</title>
+<meta name="description" content="Dolmo：macOS 会议实时翻译，字幕显示在刘海岛里，共享屏幕时别人看不到。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #17191b;
+    --island: #000;
+    --text: #f2eee6;
+    --muted: #a9a49b;
+    --sprout: #6fd3b8;
+    --amber: #f2b45a;
+    --sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--text);
+    font: 400 17px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--sprout); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--sprout); outline-offset: 3px; border-radius: 4px; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  /* Top bar: wordmark left, language right; the island hangs between them. */
+  .bar { position: relative; z-index: 1; pointer-events: none; display: flex; justify-content: space-between; align-items: center; height: 44px; }
+  .mark { font-weight: 600; letter-spacing: -0.01em; }
+  .lang {
+    pointer-events: auto;
+    font: inherit; font-size: 14px; color: var(--muted); background: none;
+    border: 0; background: #23262a; border-radius: 999px; padding: 6px 14px; min-height: 32px; cursor: pointer;
+  }
+  .lang:hover { color: var(--text); }
+
+  /* The island: true black, hanging from the top edge like the hardware notch. */
+  .stage { position: relative; height: 250px; margin-top: -44px; }
+  .island {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: min(400px, calc(100vw - 32px));
+    background: var(--island); color: var(--text);
+    border: 0; border-radius: 0 0 22px 22px; padding: 14px 20px 16px;
+    text-align: left; font: inherit; cursor: pointer;
+    transition: width .32s cubic-bezier(.23,1,.32,1);
+  }
+  .island::before, .island::after {
+    /* Outward shoulders where the shell meets the top edge. */
+    content: ""; position: absolute; top: 0; width: 14px; height: 14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M0 0h14v14A14 14 0 0 0 0 0z'/%3E%3C/svg%3E");
+  }
+  .island::before { left: -14px; transform: scaleX(-1); }
+  .island::after { right: -14px; }
+  .island[aria-expanded="true"] { width: min(480px, calc(100vw - 32px)); }
+  @media (hover: hover) and (pointer: fine) {
+    .stage:not(.sharing) .island:hover { width: min(480px, calc(100vw - 32px)); }
+    .stage:not(.sharing) .island:hover .more { grid-template-rows: 1fr; }
+  }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); height: 18px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sprout); }
+  .line { margin-top: 8px; min-height: 52px; transition: opacity .2s ease; }
+  .orig { font-size: 14px; color: var(--muted); }
+  .tr { font-size: 16px; font-weight: 500; }
+  .more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(.23,1,.32,1); }
+  .island[aria-expanded="true"] .more { grid-template-rows: 1fr; }
+  .clip { display: block; overflow: hidden; }
+  .line, .orig, .tr, .suggest { display: block; }
+  .suggest {
+    margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+    background: #121416; font-size: 14px;
+  }
+  .suggest b { display: block; font-weight: 500; color: var(--sprout); font-size: 12px; margin-bottom: 2px; }
+
+  /* "What they see": captions leave the shell; only the black shape remains. */
+  .sharing .line, .sharing .more, .sharing .status span { visibility: hidden; }
+  .sharing .island { cursor: default; }
+  
+  h1 {
+    font-size: clamp(40px, 8.4vw, 116px); line-height: 1.02; letter-spacing: -0.035em;
+    font-weight: 700; margin: 0;
+  }
+  html[lang="en"] h1 { max-width: 13ch; }
+  h1 br { display: block; }
+  .lede { color: var(--muted); font-size: 19px; max-width: 34em; margin: 22px 0 0; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 34px; }
+  .see {
+    font: inherit; font-size: 15px; font-weight: 500; color: #0b1512; background: var(--sprout);
+    border: 0; border-radius: 10px; padding: 0 18px; min-height: 44px; cursor: pointer;
+  }
+  .see[aria-pressed="true"] { background: var(--text); }
+  .soon { font-size: 15px; color: var(--muted); }
+  .seen { min-height: 1.6em; margin-top: 14px; font-size: 15px; color: var(--sprout); }
+
+  section { padding: 96px 0 0; }
+  h2 { font-size: 15px; font-weight: 500; color: var(--muted); margin: 0 0 28px; letter-spacing: 0; }
+  .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 72px; margin: 0; }
+  .list div { padding-top: 0; }
+  .list dt { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+  .list dd { margin: 8px 0 0; color: var(--text); max-width: 32em; }
+  .req { color: var(--muted); max-width: 40em; }
+  .req strong { color: var(--text); font-weight: 500; }
+  footer { margin: 128px 0 0; padding: 28px 0 40px; font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 720px) {
+    .stage { height: 210px; margin-top: 0; }
+    .bar { position: absolute; top: 151px; left: 0; right: 0; padding: 0 24px; }
+    .bar .mark { visibility: hidden; }
+    .list { grid-template-columns: 1fr; gap: 28px; }
+    section { padding-top: 72px; }
+    .lede { font-size: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .island, .more, .line { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <span class="mark">Dolmo</span>
+    <button class="lang" id="lang" type="button" lang="en">English</button>
+  </header>
+</div>
+
+<main id="top">
+  <div class="stage" id="stage">
+    <button class="island" id="island" type="button" aria-expanded="false">
+      <span class="status"><span class="dot" aria-hidden="true"></span><span data-i="live">对方在说话</span></span>
+      <span class="line" id="line">
+        <span class="orig" id="orig" lang="en">Could you walk us through the timeline?</span>
+        <span class="tr" id="tr">能给我们讲一下时间安排吗？</span>
+      </span>
+      <span class="more"><span class="clip"><span class="suggest"><b data-i="sugLabel">回答建议</b><span data-i="sug">第一阶段两周完成原型，第三周内测，月底给你们完整版本。</span></span></span></span>
+    </button>
+  </div>
+
+  <div class="wrap">
+    <h1 data-i="h1">对方说的话，<br>译好挂在刘海上。</h1>
+    <p class="lede" data-i="lede">Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；你共享屏幕时，别人看不到它。</p>
+    <div class="actions">
+      <button class="see" id="see" type="button" aria-pressed="false" data-i="see">看看对方看到什么</button>
+      <span class="soon" data-i="soon">即将推出，目前还在测试，暂不提供下载。</span>
+    </div>
+    <p class="seen" id="seen" aria-live="polite"></p>
+
+    <section aria-labelledby="what">
+      <h2 id="what" data-i="what">它能做什么</h2>
+      <dl class="list">
+        <div><dt data-i="f1">字幕在刘海里</dt><dd data-i="f1d">对方的原文和译文一起显示在刘海岛上，不挡会议窗口。不用时，岛收成刘海两侧的一个小点。</dd></div>
+        <div><dt data-i="f2">回答建议</dt><dd data-i="f2d">对方提问时，按你导入的简历或资料给出可以直接说的回答。只显示，不朗读。</dd></div>
+        <div><dt data-i="f3">共享时字幕不入画</dt><dd data-i="f3d">打开「分享时隐藏」后，截图、录屏和屏幕共享都拍不到岛上的字幕。设置页和 iPhone 第二屏不受这个开关影响。</dd></div>
+        <div><dt data-i="f4">可以完全离线</dt><dd data-i="f4d">在 macOS 26 上用系统自带的语音识别和翻译，识别和翻译都在这台 Mac 上完成。也可以接云端服务，或本机的 Ollama 等模型。</dd></div>
+        <div><dt data-i="f5">记录只留在本机</dt><dd data-i="f5d">每场会话的字幕存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。</dd></div>
+        <div><dt data-i="f6">一个快捷键开始</dt><dd data-i="f6d">检测到 Zoom、Teams、Meet 等通话时，岛上会提示「开始翻译」，按 ⌃⌥R 或点一下就开始。</dd></div>
+      </dl>
+    </section>
+
+    <section aria-labelledby="needs">
+      <h2 id="needs" data-i="needs">需要什么</h2>
+      <p class="req" data-i="req"><strong>macOS 13 或更高。</strong>离线模式需要 macOS 26。用云端服务时，需要你自己的服务账号和 API key，key 只存在本机。</p>
+    </section>
+  </div>
+</main>
+
+<div class="wrap">
+  <footer>
+    <span data-i="foot">Dolmo 基于 <a href="https://github.com/yuxino/Mimi">Mimi</a> 开发（yuxino，MIT 许可）。</span>
+  </footer>
+</div>
+
+<script>
+const T = {
+  zh: {
+    title: "Dolmo",
+    live: "对方在说话", sugLabel: "回答建议",
+    sug: "第一阶段两周完成原型，第三周内测，月底给你们完整版本。",
+    h1: "对方说的话，<br>译好挂在刘海上。",
+    lede: "Dolmo 是 macOS 上的会议实时翻译。字幕显示在屏幕顶部的刘海岛里；你共享屏幕时，别人看不到它。",
+    see: "看看对方看到什么", seeBack: "回到我看到的",
+    seen: "这是共享画面：岛还在，字幕不在。",
+    soon: "即将推出，目前还在测试，暂不提供下载。",
+    what: "它能做什么",
+    f1: "字幕在刘海里", f1d: "对方的原文和译文一起显示在刘海岛上，不挡会议窗口。不用时，岛收成刘海两侧的一个小点。",
+    f2: "回答建议", f2d: "对方提问时，按你导入的简历或资料给出可以直接说的回答。只显示，不朗读。",
+    f3: "共享时字幕不入画", f3d: "打开「分享时隐藏」后，截图、录屏和屏幕共享都拍不到岛上的字幕。设置页和 iPhone 第二屏不受这个开关影响。",
+    f4: "可以完全离线", f4d: "在 macOS 26 上用系统自带的语音识别和翻译，识别和翻译都在这台 Mac 上完成。也可以接云端服务，或本机的 Ollama 等模型。",
+    f5: "记录只留在本机", f5d: "每场会话的字幕存在本机，可以搜索，导出 TXT 或 Markdown。每次开始保存时，岛上会提醒你先征得对方同意，一键就能不保存。",
+    f6: "一个快捷键开始", f6d: "检测到 Zoom、Teams、Meet 等通话时，岛上会提示「开始翻译」，按 ⌃⌥R 或点一下就开始。",
+    needs: "需要什么",
+    req: "<strong>macOS 13 或更高。</strong>离线模式需要 macOS 26。用云端服务时，需要你自己的服务账号和 API key，key 只存在本机。",
+    foot: 'Dolmo 基于 <a href="https://github.com/yuxino/Mimi">Mimi</a> 开发（yuxino，MIT 许可）。',
+    other: "English",
+  },
+  en: {
+    title: "Dolmo",
+    live: "They're speaking", sugLabel: "Suggested reply",
+    sug: "Two weeks for the prototype, a private beta in week three, and the full version by the end of the month.",
+    h1: "What they say, translated, right under the notch.",
+    lede: "Dolmo translates meetings live on macOS. Captions appear in an island around the notch at the top of your screen, and stay out of view when you share it.",
+    see: "Show what they see", seeBack: "Back to my view",
+    seen: "This is the shared screen: the island is there, the captions are not.",
+    soon: "Coming soon. Still in testing, no download yet.",
+    what: "What it does",
+    f1: "Captions in the notch", f1d: "Their words and the translation sit together in the notch island, clear of your meeting window. When idle, the island shrinks to a dot beside the notch.",
+    f2: "Suggested replies", f2d: "When they ask a question, Dolmo suggests an answer you can say, based on the résumé or notes you imported. Shown, never spoken.",
+    f3: "Captions stay out of shares", f3d: "With “Hide when sharing” on, screenshots, recordings and screen shares can't capture the captions on the island. Settings and the iPhone second screen are not covered by this switch.",
+    f4: "Works fully offline", f4d: "On macOS 26, the built-in speech recognition and translation run on this Mac. You can also use a cloud service, or a local model such as Ollama.",
+    f5: "Transcripts stay on your Mac", f5d: "Each session's captions are saved on this Mac, searchable and exportable as TXT or Markdown. Every saved session starts with a reminder on the island to ask the other side first, with one click to not save.",
+    f6: "One shortcut to start", f6d: "When a Zoom, Teams or Meet call is detected, the island offers “Start translating”. Press ⌃⌥R or click to begin.",
+    needs: "What you need",
+    req: "<strong>macOS 13 or later.</strong> Offline mode needs macOS 26. Cloud services need your own account and API key, which stays on this Mac.",
+    foot: 'Dolmo is built on <a href="https://github.com/yuxino/Mimi">Mimi</a> by yuxino (MIT license).',
+    other: "中文",
+  },
+};
+const LINES = [
+  ["Could you walk us through the timeline?", "能给我们讲一下时间安排吗？", "Könnt ihr uns den Zeitplan erklären?"],
+  ["We'd need the first draft by Friday.", "我们周五前需要第一版。", "Wir bräuchten den ersten Entwurf bis Freitag."],
+  ["Does that work on your side?", "你们那边可以吗？", "Passt das bei euch?"],
+];
+const $ = id => document.getElementById(id);
+let lang = "zh", sharing = false, i = 0;
+try { lang = localStorage.getItem("dolmo-lang") || (navigator.language.startsWith("zh") ? "zh" : "en"); } catch { lang = navigator.language.startsWith("zh") ? "zh" : "en"; }
+
+function render() {
+  const t = T[lang];
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i]").forEach(el => {
+    const v = t[el.dataset.i];
+    if (v !== undefined) el.innerHTML = v;
+  });
+  $("lang").textContent = t.other;
+  $("lang").lang = lang === "zh" ? "en" : "zh-CN";
+  $("see").textContent = sharing ? t.seeBack : t.see;
+  $("seen").textContent = sharing ? t.seen : "";
+  showLine();
+}
+function showLine() {
+  // Chinese readers see English speech translated into Chinese; English readers see German into English.
+  const [en, zh, de] = LINES[i];
+  $("orig").textContent = lang === "zh" ? en : de;
+  $("orig").lang = lang === "zh" ? "en" : "de";
+  $("tr").textContent = lang === "zh" ? zh : en;
+}
+
+$("lang").onclick = () => {
+  lang = lang === "zh" ? "en" : "zh";
+  try { localStorage.setItem("dolmo-lang", lang); } catch {}
+  render();
+};
+$("island").onclick = () => {
+  if (sharing) return;
+  const open = $("island").getAttribute("aria-expanded") === "true";
+  $("island").setAttribute("aria-expanded", String(!open));
+};
+$("see").onclick = () => {
+  sharing = !sharing;
+  $("stage").classList.toggle("sharing", sharing);
+  $("see").setAttribute("aria-pressed", String(sharing));
+  if (sharing) $("island").setAttribute("aria-expanded", "false");
+  render();
+};
+
+// Live captions only when motion is welcome and the page is visible.
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+setInterval(() => {
+  if (still.matches || document.hidden || sharing) return;
+  $("line").style.opacity = 0;
+  setTimeout(() => { i = (i + 1) % LINES.length; showLine(); $("line").style.opacity = 1; }, 200);
+}, 3600);
+render();
+</script>
+</body>
+</html>
